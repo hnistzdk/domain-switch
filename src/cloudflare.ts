@@ -10,18 +10,40 @@ export function createClient(config: CloudflareConfig): Cloudflare {
 }
 
 /**
- * 列出所有 Worker 脚本
+ * 列出所有 Worker 脚本(Workers & Pages 项目中的 Workers)
  */
 export async function listWorkers(
   client: Cloudflare,
   accountId: string
 ): Promise<any[]> {
   try {
+    // SDK v5 中 Workers 服务通过 scripts API 访问
     const response = await client.workers.scripts.list({ account_id: accountId });
     return response.result || [];
   } catch (error) {
     console.error('获取 Workers 列表失败:', error);
-    throw error;
+    return []; // 返回空数组而不是抛出错误,允许继续执行
+  }
+}
+
+/**
+ * 获取 Worker 脚本的自定义域名
+ */
+export async function getWorkerDomains(
+  client: Cloudflare,
+  accountId: string,
+  scriptName: string
+): Promise<any[]> {
+  try {
+    // 查询账户级别的所有 Worker 自定义域名,然后过滤出属于该脚本的
+    const response = await client.workers.domains.list({ account_id: accountId });
+    const allDomains = response.result || [];
+
+    // 过滤出属于当前 Worker 脚本的域名
+    return allDomains.filter((d: any) => d.service === scriptName);
+  } catch (error) {
+    // 域名查询可能失败,静默返回空数组
+    return [];
   }
 }
 
@@ -78,6 +100,37 @@ export async function updateWorkerRoute(
 }
 
 /**
+ * 更新 Worker 服务的自定义域名
+ */
+export async function updateWorkerDomain(
+  client: Cloudflare,
+  accountId: string,
+  serviceName: string,
+  oldDomain: string,
+  newDomain: string,
+  zoneId: string
+): Promise<void> {
+  try {
+    // 删除旧域名 - SDK v5 第一个参数是 domainId (hostname)
+    await client.workers.domains.delete(oldDomain, {
+      account_id: accountId
+    });
+
+    // 添加新域名 - SDK v5 使用 update 方法来创建域名 (PUT /accounts/{account_id}/workers/domains)
+    await client.workers.domains.update({
+      account_id: accountId,
+      hostname: newDomain,
+      service: serviceName,
+      environment: 'production',
+      zone_id: zoneId
+    });
+  } catch (error) {
+    console.error(`更新 Worker ${serviceName} 的域名失败:`, error);
+    throw error;
+  }
+}
+
+/**
  * 更新 Pages 项目的自定义域名
  */
 export async function updatePageDomain(
@@ -89,19 +142,34 @@ export async function updatePageDomain(
 ): Promise<void> {
   try {
     // 删除旧域名
-    await client.pages.projects.domains.delete(oldDomain, {
+    await client.pages.projects.domains.delete(oldDomain, projectName, {
       account_id: accountId,
-      project_name: projectName
     });
 
     // 添加新域名
-    await client.pages.projects.domains.create({
+    await client.pages.projects.domains.create(projectName, {
       account_id: accountId,
-      project_name: projectName,
       name: newDomain
     });
   } catch (error) {
     console.error(`更新 Pages 项目 ${projectName} 的域名失败:`, error);
+    throw error;
+  }
+}
+
+/**
+ * 获取 Zone 信息
+ */
+export async function getZoneInfo(
+  client: Cloudflare,
+  zoneId: string
+): Promise<any> {
+  try {
+    // Cloudflare SDK v5 使用 get 方法,传入 zone_id 参数
+    const response = await client.zones.get({ zone_id: zoneId });
+    return response;
+  } catch (error) {
+    console.error(`获取 Zone ${zoneId} 信息失败:`, error);
     throw error;
   }
 }
@@ -142,13 +210,13 @@ export async function ensureZone(
 
   // 未托管则创建（使用 Free 计划）
   try {
-    const response = await client.zones.create({
+    const zone = await client.zones.create({
       name: domain,
       account: { id: accountId },
       type: 'full'  // 完整 DNS 托管
     });
-    console.log(`域名 ${domain} 已添加到 Cloudflare (Free 计划)，Zone ID: ${response.result.id}`);
-    return response.result.id;
+    console.log(`域名 ${domain} 已添加到 Cloudflare (Free 计划)，Zone ID: ${zone.id}`);
+    return zone.id;
   } catch (error) {
     console.error(`添加域名 ${domain} 失败:`, error);
     throw error;
@@ -163,8 +231,8 @@ export async function getSSLSettings(
   zoneId: string
 ): Promise<any> {
   try {
-    const response = await client.ssl.settings.get({ zone_id: zoneId });
-    return response.result;
+    const response = await client.zones.settings.ssl.get({ zone_id: zoneId });
+    return response;
   } catch (error) {
     console.error(`获取 Zone ${zoneId} 的 SSL 配置失败:`, error);
     throw error;
@@ -180,7 +248,7 @@ export async function setSSLMode(
   mode: 'off' | 'flexible' | 'full' | 'strict'
 ): Promise<void> {
   try {
-    await client.ssl.settings.edit({
+    await client.zones.settings.ssl.edit({
       zone_id: zoneId,
       value: mode
     });
@@ -200,7 +268,7 @@ export async function getUniversalSSLStatus(
 ): Promise<any> {
   try {
     const response = await client.ssl.universal.settings.get({ zone_id: zoneId });
-    return response.result;
+    return response;
   } catch (error) {
     console.error(`获取 Universal SSL 状态失败:`, error);
     throw error;

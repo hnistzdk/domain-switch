@@ -5,15 +5,20 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "dev": "tsx src/index.ts",
+    "dev": "node --loader tsx --no-warnings src/index.ts",
+    "dev:tsx": "tsx src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js"
   },
-  "keywords": ["cloudflare", "domain", "automation"],
+  "keywords": [
+    "cloudflare",
+    "domain",
+    "automation"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "cloudflare": "^3.5.0",
+    "cloudflare": "^5.2.0",
     "commander": "^12.1.0",
     "dotenv": "^16.4.7"
   },

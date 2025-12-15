@@ -2,11 +2,13 @@ import Cloudflare from 'cloudflare';
 import * as cf from './cloudflare.js';
 
 export interface AffectedApp {
-  type: 'worker' | 'page';
+  type: 'worker' | 'worker_service' | 'page';
   name: string;
   oldPattern?: string;
   newPattern?: string;
   routeId?: string;
+  serviceName?: string; // Worker 服务名
+  domains?: string[]; // Worker/Pages 的自定义域名列表
 }
 
 export interface SSLConfig {
@@ -59,7 +61,7 @@ export async function findAffectedApps(
 
   const affected: AffectedApp[] = [];
 
-  // 检查 Worker 路由
+  // 检查 Worker 路由(旧式路由方式)
   console.log('扫描 Worker 路由...');
   const routes = await cf.getWorkerRoutes(client, oldZoneId);
   for (const route of routes) {
@@ -74,14 +76,35 @@ export async function findAffectedApps(
     }
   }
 
+  // 检查 Worker 服务(新式自定义域名方式)
+  console.log('扫描 Worker 服务...');
+  const workers = await cf.listWorkers(client, accountId);
+  for (const worker of workers) {
+    const domains = await cf.getWorkerDomains(client, accountId, worker.id || worker.name);
+    const matchedDomains = domains.filter((d: any) =>
+      d.hostname && d.hostname.includes(oldDomain)
+    );
+
+    if (matchedDomains.length > 0) {
+      affected.push({
+        type: 'worker_service',
+        name: worker.id || worker.name,
+        serviceName: worker.id || worker.name,
+        domains: matchedDomains.map((d: any) => d.hostname)
+      });
+    }
+  }
+
   // 检查 Pages 项目
   console.log('扫描 Pages 项目...');
   const pages = await cf.listPages(client, accountId);
   for (const page of pages) {
     if (page.domains && page.domains.some((d: string) => d.includes(oldDomain))) {
+      const matchedDomains = page.domains.filter((d: string) => d.includes(oldDomain));
       affected.push({
         type: 'page',
-        name: page.name
+        name: page.name,
+        domains: matchedDomains
       });
     }
   }
@@ -109,12 +132,24 @@ export async function switchDomain(
   for (const app of apps) {
     try {
       if (app.type === 'worker' && app.routeId && app.oldPattern) {
+        // 旧式 Worker 路由
         const newPattern = app.oldPattern.replace(oldDomain, newDomain);
         await cf.updateWorkerRoute(client, newZoneId, app.routeId, newPattern);
         console.log(`✓ Worker 路由已更新: ${app.oldPattern} → ${newPattern}`);
-      } else if (app.type === 'page') {
-        await cf.updatePageDomain(client, accountId, app.name, oldDomain, newDomain);
-        console.log(`✓ Pages 项目已更新: ${app.name}`);
+      } else if (app.type === 'worker_service' && app.serviceName && app.domains) {
+        // 新式 Worker 服务自定义域名
+        for (const domain of app.domains) {
+          const newDomainName = domain.replace(oldDomain, newDomain);
+          await cf.updateWorkerDomain(client, accountId, app.serviceName, domain, newDomainName, newZoneId);
+          console.log(`✓ Worker 服务已更新: ${app.name} (${domain} → ${newDomainName})`);
+        }
+      } else if (app.type === 'page' && app.domains) {
+        // Pages 项目
+        for (const domain of app.domains) {
+          const newDomainName = domain.replace(oldDomain, newDomain);
+          await cf.updatePageDomain(client, accountId, app.name, domain, newDomainName);
+          console.log(`✓ Pages 项目已更新: ${app.name} (${domain} → ${newDomainName})`);
+        }
       }
       successCount++;
     } catch (error) {

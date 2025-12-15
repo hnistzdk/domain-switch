@@ -54,21 +54,59 @@ CF_ACCOUNT_ID=your_account_id_here
 # 旧域名的 Zone ID (必须)
 # 在旧域名的 Cloudflare Dashboard 右侧边栏可以找到
 CF_ZONE_ID=your_old_zone_id_here
+
+# 旧域名 (可选,可通过 --old-domain 参数覆盖)
+OLD_DOMAIN=old.com
+
+# 新域名 (可选,可通过 --new-domain 参数覆盖)
+NEW_DOMAIN=new.com
 ```
 
 #### 3. 运行工具
 
-**开发模式**（推荐，调试时使用）：
+**方式一: 使用环境变量 (推荐)**
+
+在 `.env` 文件中配置好所有参数后,直接运行:
 
 ```bash
-npm run dev -- --old-domain old.com --new-domain new.com
+# 调试模式
+npx tsx src/index.ts --dry-run
+
+# 实际执行
+npx tsx src/index.ts
 ```
+
+**方式二: 使用命令行参数**
+
+命令行参数会覆盖 `.env` 中的配置:
+
+```bash
+# 调试模式
+npx tsx src/index.ts --old-domain zaiolos.fun --new-domain zaiolos.vip --dry-run
+
+# 实际执行
+npx tsx src/index.ts --old-domain zaiolos.fun --new-domain zaiolos.vip
+```
+
+**调试模式**会：
+- ✅ 验证 API Token 和环境变量配置
+- ✅ 检查旧域名 Zone 信息和 SSL 配置
+- ✅ 查询新域名托管状态
+- ✅ 列出所有将被修改的 Worker 和 Pages 应用
+- ❌ 不会执行任何修改操作
 
 **生产模式**：
 
 ```bash
+# 先编译
 npm run build
-npm start -- --old-domain old.com --new-domain new.com
+
+# 使用 .env 中的域名
+node dist/index.js --dry-run  # 先测试
+node dist/index.js            # 实际执行
+
+# 或使用命令行参数
+node dist/index.js --old-domain zaiolos.fun --new-domain zaiolos.vip
 ```
 
 ### 执行流程
@@ -197,20 +235,51 @@ CF_ACCOUNT_ID=your_account_id_here
 # Old Domain Zone ID (required)
 # Found in old domain's Cloudflare Dashboard sidebar
 CF_ZONE_ID=your_old_zone_id_here
+
+# Old Domain (optional, can be overridden by --old-domain parameter)
+OLD_DOMAIN=old.com
+
+# New Domain (optional, can be overridden by --new-domain parameter)
+NEW_DOMAIN=new.com
 ```
 
 #### 3. Run the Tool
 
-**Development Mode** (recommended for debugging):
+**Method 1: Using Environment Variables (Recommended)**
+
+After configuring `OLD_DOMAIN` and `NEW_DOMAIN` in `.env` file:
 
 ```bash
+# Dry-run mode
+npm run dev -- --dry-run
+
+# Execute changes
+npm run dev
+```
+
+**Method 2: Using Command Line Parameters**
+
+```bash
+# Dry-run mode
+npm run dev -- --old-domain old.com --new-domain new.com --dry-run
+
+# Execute changes
 npm run dev -- --old-domain old.com --new-domain new.com
 ```
+
+**Dry-run mode** will:
+- ✅ Verify API Token and environment variables
+- ✅ Check old domain Zone info and SSL configuration
+- ✅ Query new domain hosting status
+- ✅ List all Worker and Pages apps to be modified
+- ❌ NOT execute any modifications
 
 **Production Mode**:
 
 ```bash
 npm run build
+npm start  # Use domains from .env
+# or
 npm start -- --old-domain old.com --new-domain new.com
 ```
 

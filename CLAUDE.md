@@ -26,18 +26,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # 安装依赖
 npm install
 
-# 开发模式（TypeScript 实时编译）
-npm run dev
+# 调试模式（验证配置，不执行修改）
+npm run dev -- --old-domain example.com --new-domain newdomain.com --dry-run
+
+# 开发模式（实际执行）
+npm run dev -- --old-domain example.com --new-domain newdomain.com
 
 # 构建
 npm run build
 
-# 运行
+# 生产模式运行
 npm start -- --old-domain example.com --new-domain newdomain.com
-
-# 或直接运行 TypeScript（开发时）
-npm run dev -- --old-domain example.com --new-domain newdomain.com
 ```
+
+## CLI 参数
+
+- `--old-domain <domain>` (必需): 旧域名
+- `--new-domain <domain>` (必需): 新域名
+- `--zone-id <id>` (可选): 旧域名的 Zone ID，默认从环境变量读取
+- `--dry-run` (可选): 调试模式，仅查询和验证配置，不执行任何修改
 
 ## 核心架构
 
