@@ -158,13 +158,28 @@ async function main() {
   }
 
   // 正常执行模式
-  // 步骤 1: 准备新域名（托管 + SSL 配置）
-  const newZoneId = await switcher.prepareNewDomain(
-    client,
-    accountId,
-    oldZoneId,
-    newDomain
-  );
+  // 步骤 1: 准备新域名(托管 + SSL 配置)
+  let newZoneId: string;
+  try {
+    newZoneId = await switcher.prepareNewDomain(
+      client,
+      accountId,
+      oldZoneId,
+      newDomain
+    );
+  } catch (error: any) {
+    console.error('\n=================================================');
+    console.error('  ✗ 新域名准备失败,终止执行');
+    console.error('=================================================');
+    console.error(`错误详情: ${error.message}`);
+    console.error('\n可能的原因:');
+    console.error('  1. Cloudflare API Token 权限不足');
+    console.error('  2. 账户已达到免费计划的 Zone 数量上限');
+    console.error('  3. 域名格式不正确或已被其他账户托管');
+    console.error('  4. SSL 配置复制失败');
+    console.error('\n请检查配置后重试。');
+    process.exit(1);
+  }
 
   // 步骤 2: 查找受影响的应用
   const affected = await switcher.findAffectedApps(

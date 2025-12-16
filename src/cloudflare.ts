@@ -111,12 +111,8 @@ export async function updateWorkerDomain(
   zoneId: string
 ): Promise<void> {
   try {
-    // 删除旧域名 - SDK v5 第一个参数是 domainId (hostname)
-    await client.workers.domains.delete(oldDomain, {
-      account_id: accountId
-    });
-
-    // 添加新域名 - SDK v5 使用 update 方法来创建域名 (PUT /accounts/{account_id}/workers/domains)
+    // 先添加新域名 - SDK v5 使用 update 方法来创建域名 (PUT /accounts/{account_id}/workers/domains)
+    // 这样即使后续删除失败，服务至少可以继续运行
     await client.workers.domains.update({
       account_id: accountId,
       hostname: newDomain,
@@ -124,6 +120,18 @@ export async function updateWorkerDomain(
       environment: 'production',
       zone_id: zoneId
     });
+
+    // 新域名添加成功后，再删除旧域名
+    // 如果删除失败，至少新域名已经生效，可以手动清理
+    try {
+      await client.workers.domains.delete(oldDomain, {
+        account_id: accountId
+      });
+    } catch (deleteError: any) {
+      console.warn(`  ⚠ 警告: 新域名已添加，但删除旧域名 ${oldDomain} 失败: ${deleteError.message}`);
+      console.warn(`  → 请手动在 Cloudflare Dashboard 删除旧域名`);
+      // 不抛出错误，因为新域名已经添加成功
+    }
   } catch (error) {
     console.error(`更新 Worker ${serviceName} 的域名失败:`, error);
     throw error;
@@ -141,16 +149,23 @@ export async function updatePageDomain(
   newDomain: string
 ): Promise<void> {
   try {
-    // 删除旧域名
-    await client.pages.projects.domains.delete(oldDomain, projectName, {
-      account_id: accountId,
-    });
-
-    // 添加新域名
+    // 先添加新域名，确保服务可以继续运行
     await client.pages.projects.domains.create(projectName, {
       account_id: accountId,
       name: newDomain
     });
+
+    // 新域名添加成功后，再删除旧域名
+    // 如果删除失败，至少新域名已经生效，可以手动清理
+    try {
+      await client.pages.projects.domains.delete(oldDomain, projectName, {
+        account_id: accountId,
+      });
+    } catch (deleteError: any) {
+      console.warn(`  ⚠ 警告: 新域名已添加，但删除旧域名 ${oldDomain} 失败: ${deleteError.message}`);
+      console.warn(`  → 请手动在 Cloudflare Dashboard 删除旧域名`);
+      // 不抛出错误，因为新域名已经添加成功
+    }
   } catch (error) {
     console.error(`更新 Pages 项目 ${projectName} 的域名失败:`, error);
     throw error;
