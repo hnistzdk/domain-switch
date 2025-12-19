@@ -44,7 +44,9 @@ cp .env.example .env
 ```bash
 # Cloudflare API Token (必须)
 # 在 https://dash.cloudflare.com/profile/api-tokens 创建
-# 需要权限: Account.Workers Scripts, Account.Pages, Zone.Workers Routes, Zone.Zone, Zone.SSL
+# 需要权限:
+#   - Account: Workers Scripts (Read, Edit), Pages (Read, Edit), SSL and Certificates (Read, Edit)
+#   - Zone: Workers Routes (Read, Edit), Zone (Read, Edit), Zone Settings (Read, Edit), SSL and Certificates (Read, Edit)
 CF_API_TOKEN=your_api_token_here
 
 # Cloudflare Account ID (必须)
@@ -164,11 +166,20 @@ domain-switch/
 
 **Q: 如何获取 API Token？**
 A: 访问 https://dash.cloudflare.com/profile/api-tokens ，创建 Token，需要以下权限：
-- Account.Workers Scripts (Read, Edit)
-- Account.Pages (Read, Edit)
-- Zone.Workers Routes (Read, Edit)
-- Zone.Zone (Read, Edit)
-- Zone.SSL (Read, Edit)
+
+**Account 级别权限：**
+- Workers Scripts: Read, Edit
+- Pages: Read, Edit
+- SSL and Certificates: Read, Edit
+
+**Zone 级别权限（应用于"所有区域"）：**
+- Workers Routes: Read, Edit
+- Zone: Read, Edit
+- Zone Settings: Read, Edit
+- SSL and Certificates: Read, Edit
+
+**Q: 遇到 403 权限错误怎么办？**
+A: 检查 API Token 是否包含所有必需权限，特别是 **Zone Settings: Read, Edit** 权限。缺少此权限会导致无法读取 SSL 配置。
 
 **Q: 执行失败了怎么办？**
 A: 工具支持幂等性，可以直接重新运行，已成功的操作会被跳过。
@@ -225,7 +236,9 @@ Edit `.env` file:
 ```bash
 # Cloudflare API Token (required)
 # Create at https://dash.cloudflare.com/profile/api-tokens
-# Required permissions: Account.Workers Scripts, Account.Pages, Zone.Workers Routes, Zone.Zone, Zone.SSL
+# Required permissions:
+#   - Account: Workers Scripts (Read, Edit), Pages (Read, Edit), SSL and Certificates (Read, Edit)
+#   - Zone: Workers Routes (Read, Edit), Zone (Read, Edit), Zone Settings (Read, Edit), SSL and Certificates (Read, Edit)
 CF_API_TOKEN=your_api_token_here
 
 # Cloudflare Account ID (required)
@@ -338,11 +351,20 @@ domain-switch/
 
 **Q: How to get API Token?**
 A: Visit https://dash.cloudflare.com/profile/api-tokens, create a token with these permissions:
-- Account.Workers Scripts (Read, Edit)
-- Account.Pages (Read, Edit)
-- Zone.Workers Routes (Read, Edit)
-- Zone.Zone (Read, Edit)
-- Zone.SSL (Read, Edit)
+
+**Account-level permissions:**
+- Workers Scripts: Read, Edit
+- Pages: Read, Edit
+- SSL and Certificates: Read, Edit
+
+**Zone-level permissions (apply to "All zones"):**
+- Workers Routes: Read, Edit
+- Zone: Read, Edit
+- Zone Settings: Read, Edit
+- SSL and Certificates: Read, Edit
+
+**Q: What if I get a 403 permission error?**
+A: Check if your API Token includes all required permissions, especially **Zone Settings: Read, Edit**. Missing this permission will prevent reading SSL configuration.
 
 **Q: What if execution fails?**
 A: The tool supports idempotency. Simply re-run it; successful operations will be skipped.

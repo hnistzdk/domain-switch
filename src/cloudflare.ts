@@ -246,7 +246,7 @@ export async function getSSLSettings(
   zoneId: string
 ): Promise<any> {
   try {
-    const response = await client.zones.settings.ssl.get({ zone_id: zoneId });
+    const response = await client.zones.settings.get('ssl', { zone_id: zoneId });
     return response;
   } catch (error) {
     console.error(`获取 Zone ${zoneId} 的 SSL 配置失败:`, error);
@@ -263,7 +263,7 @@ export async function setSSLMode(
   mode: 'off' | 'flexible' | 'full' | 'strict'
 ): Promise<void> {
   try {
-    await client.zones.settings.ssl.edit({
+    await client.zones.settings.edit('ssl', {
       zone_id: zoneId,
       value: mode
     });

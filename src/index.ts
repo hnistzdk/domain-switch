@@ -80,11 +80,12 @@ async function main() {
       process.exit(1);
     }
 
-    // 验证 2: 检查旧域名 SSL 配置(SDK v5 API变更,暂时跳过)
+    // 验证 2: 检查旧域名 SSL 配置
     console.log('\n2. 获取旧域名 SSL 配置...');
-    console.log('   ℹ  跳过 SSL 配置验证(新域名将使用默认配置)');
-    // const oldSslConfigaa = cf.getSSLSettings(client, oldZoneId)
-    // console.log('oldSslConfigaa -> ', oldSslConfigaa);
+    const oldSslConfig = await cf.getSSLSettings(client, oldZoneId)
+    console.log('旧域名 SslConfig -> ', JSON.stringify(oldSslConfig));
+    const oldUniversalSSLConfig = await cf.getUniversalSSLStatus(client, oldZoneId)
+    console.log('旧域名 UniversalSSLConfig -> ', JSON.stringify(oldUniversalSSLConfig));
     
 
     // 验证 3: 检查新域名是否已托管

@@ -104,7 +104,9 @@ const affected = await findAffectedApps(client, accountId, oldZoneId, oldDomain)
 await switchDomain(client, accountId, newZoneId, oldDomain, newDomain, affected);
 // 内部流程：
 //   - 对每个 Worker 路由：updateWorkerRoute()
-//   - 对每个 Pages 项目：updatePageDomain()（先删除旧域名，再添加新域名）
+//   - 对每个 Worker 服务：updateWorkerDomain()（先添加新域名，再删除旧域名）
+//   - 对每个 Pages 项目：updatePageDomain()（先添加新域名，再删除旧域名）
+//   - 删除失败不会抛出错误，仅打印警告（因为新域名已生效）
 //   - 记录成功/失败数量
 ```
 
@@ -150,7 +152,7 @@ CF_ZONE_ID=your_old_zone_id  # 旧域名的 Zone ID（不是新域名）
    - `ensureZone()` 会先检查域名是否已托管
    - SSL 配置会直接覆盖，不会重复申请
    - Worker 路由更新是替换操作，不是追加
-   - Pages 域名更新会先删除旧域名再添加新域名
+   - Worker 服务和 Pages 域名更新会**先添加新域名，再删除旧域名**（确保服务不中断）
 
 2. **错误信息要详细：** 当 API 调用失败时，打印完整的错误信息
 
