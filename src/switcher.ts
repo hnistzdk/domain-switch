@@ -17,13 +17,14 @@ export interface SSLConfig {
 }
 
 /**
- * 准备新域名：托管 + 复制 SSL 配置
+ * 准备新域名：托管 + 复制 SSL 配置 + 复制 DNS 记录
  */
 export async function prepareNewDomain(
   client: Cloudflare,
   accountId: string,
   oldZoneId: string,
-  newDomain: string
+  newDomain: string,
+  oldDomain: string
 ): Promise<string> {
   console.log(`\n=== 步骤 1: 准备新域名 ${newDomain} ===\n`);
 
@@ -43,6 +44,32 @@ export async function prepareNewDomain(
   console.log('\n复制 SSL 配置到新域名...');
   await cf.setSSLMode(client, newZoneId, oldSSLSettings.value);
   await cf.setUniversalSSL(client, newZoneId, oldUniversalSSL.enabled);
+
+  // 4. 复制 DNS 记录
+  console.log('\n📋 正在复制 DNS 记录...');
+  const oldRecords = await cf.getDNSRecords(client, oldZoneId);
+  const allowedTypes = ['A', 'AAAA', 'CNAME', 'MX', 'TXT'];
+  const toCopy = oldRecords.filter((r: any) => allowedTypes.includes(r.type));
+
+  let copied = 0;
+  for (const record of toCopy) {
+    try {
+      await cf.createDNSRecord(client, newZoneId, {
+        type: record.type,
+        name: record.name.replace(oldDomain, newDomain),
+        content: record.content,
+        ttl: record.ttl,
+        proxied: record.proxied,
+        priority: record.priority
+      });
+      copied++;
+    } catch (err: any) {
+      if (!err.message?.includes('already exists')) {
+        console.warn(`  ⚠️  复制失败: ${record.type} ${record.name}`);
+      }
+    }
+  }
+  console.log(`✅ 已复制 ${copied}/${toCopy.length} 条 DNS 记录`);
 
   console.log('\n✓ 新域名准备完成');
   return newZoneId;

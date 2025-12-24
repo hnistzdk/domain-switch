@@ -14,6 +14,7 @@ Cloudflare 域名批量切换工具 - 自动化迁移所有 Worker 和 Pages 应
 
 - ✅ 新域名托管（Free 计划）
 - ✅ SSL 配置复制（模式 + Universal SSL）
+- ✅ DNS 记录复制（A/AAAA/CNAME/MX/TXT）
 - ✅ Worker 路由批量更新
 - ✅ Pages 自定义域名批量更新
 
@@ -45,8 +46,8 @@ cp .env.example .env
 # Cloudflare API Token (必须)
 # 在 https://dash.cloudflare.com/profile/api-tokens 创建
 # 需要权限:
-#   - Account: Workers Scripts (Read, Edit), Pages (Read, Edit), SSL and Certificates (Read, Edit)
-#   - Zone: Workers Routes (Read, Edit), Zone (Read, Edit), Zone Settings (Read, Edit), SSL and Certificates (Read, Edit)
+#   - Account: Workers Scripts (Read, Edit), Pages (Read, Edit)
+#   - Zone: Zone (Read, Edit), Zone Settings (Read, Edit), SSL and Certificates (Read, Edit), DNS (Read, Edit), Workers Routes (Read, Edit)
 CF_API_TOKEN=your_api_token_here
 
 # Cloudflare Account ID (必须)
@@ -84,15 +85,15 @@ npx tsx src/index.ts
 
 ```bash
 # 调试模式
-npx tsx src/index.ts --old-domain zaiolos.fun --new-domain zaiolos.vip --dry-run
+npx tsx src/index.ts --old-domain old.com --new-domain new.com --dry-run
 
 # 实际执行
-npx tsx src/index.ts --old-domain zaiolos.fun --new-domain zaiolos.vip
+npx tsx src/index.ts --old-domain old.com --new-domain new.com
 ```
 
 **调试模式**会：
 - ✅ 验证 API Token 和环境变量配置
-- ✅ 检查旧域名 Zone 信息和 SSL 配置
+- ✅ 检查旧域名 Zone 信息、SSL 配置和 DNS 记录
 - ✅ 查询新域名托管状态
 - ✅ 列出所有将被修改的 Worker 和 Pages 应用
 - ❌ 不会执行任何修改操作
@@ -108,7 +109,7 @@ node dist/index.js --dry-run  # 先测试
 node dist/index.js            # 实际执行
 
 # 或使用命令行参数
-node dist/index.js --old-domain zaiolos.fun --new-domain zaiolos.vip
+node dist/index.js --old-domain old.com --new-domain new.com
 ```
 
 ### 执行流程
@@ -118,7 +119,8 @@ node dist/index.js --old-domain zaiolos.fun --new-domain zaiolos.vip
   ├─ 检查新域名是否已托管
   ├─ 未托管则创建 (Free 计划)
   ├─ 获取旧域名的 SSL 配置
-  └─ 复制 SSL 配置到新域名
+  ├─ 复制 SSL 配置到新域名
+  └─ 复制 DNS 记录到新域名 (A/AAAA/CNAME/MX/TXT)
 
 步骤 2: 扫描受影响的应用
   ├─ 扫描所有 Worker 路由
@@ -170,16 +172,18 @@ A: 访问 https://dash.cloudflare.com/profile/api-tokens ，创建 Token，需�
 **Account 级别权限：**
 - Workers Scripts: Read, Edit
 - Pages: Read, Edit
-- SSL and Certificates: Read, Edit
 
 **Zone 级别权限（应用于"所有区域"）：**
-- Workers Routes: Read, Edit
 - Zone: Read, Edit
 - Zone Settings: Read, Edit
 - SSL and Certificates: Read, Edit
+- DNS: Read, Edit
+- Workers Routes: Read, Edit
 
 **Q: 遇到 403 权限错误怎么办？**
-A: 检查 API Token 是否包含所有必需权限，特别是 **Zone Settings: Read, Edit** 权限。缺少此权限会导致无法读取 SSL 配置。
+A: 检查 API Token 是否包含所有必需权限。常见缺失权限：
+- **Zone Settings: Edit** - 无法读取/设置 SSL 配置
+- **DNS: Edit** - 无法读取/复制 DNS 记录
 
 **Q: 执行失败了怎么办？**
 A: 工具支持幂等性，可以直接重新运行，已成功的操作会被跳过。
@@ -206,6 +210,7 @@ When your domain expires at the registrar and needs replacement, manually updati
 
 - ✅ New domain hosting (Free plan)
 - ✅ SSL configuration replication (mode + Universal SSL)
+- ✅ DNS records replication (A/AAAA/CNAME/MX/TXT)
 - ✅ Batch Worker route updates
 - ✅ Batch Pages custom domain updates
 
@@ -237,8 +242,8 @@ Edit `.env` file:
 # Cloudflare API Token (required)
 # Create at https://dash.cloudflare.com/profile/api-tokens
 # Required permissions:
-#   - Account: Workers Scripts (Read, Edit), Pages (Read, Edit), SSL and Certificates (Read, Edit)
-#   - Zone: Workers Routes (Read, Edit), Zone (Read, Edit), Zone Settings (Read, Edit), SSL and Certificates (Read, Edit)
+#   - Account: Workers Scripts (Read, Edit), Pages (Read, Edit)
+#   - Zone: Zone (Read, Edit), Zone Settings (Read, Edit), SSL and Certificates (Read, Edit), DNS (Read, Edit), Workers Routes (Read, Edit)
 CF_API_TOKEN=your_api_token_here
 
 # Cloudflare Account ID (required)
@@ -282,7 +287,7 @@ npm run dev -- --old-domain old.com --new-domain new.com
 
 **Dry-run mode** will:
 - ✅ Verify API Token and environment variables
-- ✅ Check old domain Zone info and SSL configuration
+- ✅ Check old domain Zone info, SSL configuration, and DNS records
 - ✅ Query new domain hosting status
 - ✅ List all Worker and Pages apps to be modified
 - ❌ NOT execute any modifications
@@ -303,7 +308,8 @@ Step 1: Prepare New Domain
   ├─ Check if new domain is already hosted
   ├─ Create if not hosted (Free plan)
   ├─ Get old domain's SSL configuration
-  └─ Copy SSL configuration to new domain
+  ├─ Copy SSL configuration to new domain
+  └─ Copy DNS records to new domain (A/AAAA/CNAME/MX/TXT)
 
 Step 2: Scan Affected Applications
   ├─ Scan all Worker routes
@@ -355,16 +361,18 @@ A: Visit https://dash.cloudflare.com/profile/api-tokens, create a token with the
 **Account-level permissions:**
 - Workers Scripts: Read, Edit
 - Pages: Read, Edit
-- SSL and Certificates: Read, Edit
 
 **Zone-level permissions (apply to "All zones"):**
-- Workers Routes: Read, Edit
 - Zone: Read, Edit
 - Zone Settings: Read, Edit
 - SSL and Certificates: Read, Edit
+- DNS: Read, Edit
+- Workers Routes: Read, Edit
 
 **Q: What if I get a 403 permission error?**
-A: Check if your API Token includes all required permissions, especially **Zone Settings: Read, Edit**. Missing this permission will prevent reading SSL configuration.
+A: Check if your API Token includes all required permissions. Common missing permissions:
+- **Zone Settings: Edit** - Cannot read/set SSL configuration
+- **DNS: Edit** - Cannot read/copy DNS records
 
 **Q: What if execution fails?**
 A: The tool supports idempotency. Simply re-run it; successful operations will be skipped.

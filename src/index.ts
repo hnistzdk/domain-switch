@@ -86,7 +86,16 @@ async function main() {
     console.log('旧域名 SslConfig -> ', JSON.stringify(oldSslConfig));
     const oldUniversalSSLConfig = await cf.getUniversalSSLStatus(client, oldZoneId)
     console.log('旧域名 UniversalSSLConfig -> ', JSON.stringify(oldUniversalSSLConfig));
-    
+
+    // 验证 2.5: 检查旧域名 DNS 记录
+    console.log('\n2.5. 获取旧域名 DNS 记录...');
+    const oldRecords = await cf.getDNSRecords(client, oldZoneId);
+    const allowedTypes = ['A', 'AAAA', 'CNAME', 'MX', 'TXT'];
+    const toCopy = oldRecords.filter((r: any) => allowedTypes.includes(r.type));
+    console.log(`   ✓ 找到 ${toCopy.length} 条可复制的 DNS 记录:`);
+    toCopy.forEach((r: any) => {
+      console.log(`     - ${r.type.padEnd(6)} ${r.name} → ${r.content}`);
+    });
 
     // 验证 3: 检查新域名是否已托管
     console.log('\n3. 检查新域名托管状态...');
@@ -159,14 +168,15 @@ async function main() {
   }
 
   // 正常执行模式
-  // 步骤 1: 准备新域名(托管 + SSL 配置)
+  // 步骤 1: 准备新域名(托管 + SSL 配置 + DNS 记录)
   let newZoneId: string;
   try {
     newZoneId = await switcher.prepareNewDomain(
       client,
       accountId,
       oldZoneId,
-      newDomain
+      newDomain,
+      oldDomain
     );
   } catch (error: any) {
     console.error('\n=================================================');

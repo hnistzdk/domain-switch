@@ -309,3 +309,51 @@ export async function setUniversalSSL(
     throw error;
   }
 }
+
+/**
+ * 获取 Zone 的所有 DNS 记录
+ */
+export async function getDNSRecords(
+  client: Cloudflare,
+  zoneId: string
+): Promise<any[]> {
+  try {
+    const response = await client.dns.records.list({ zone_id: zoneId });
+    return response.result || [];
+  } catch (error) {
+    console.error(`获取 DNS 记录失败:`, error);
+    throw error;
+  }
+}
+
+/**
+ * 创建 DNS 记录
+ */
+export async function createDNSRecord(
+  client: Cloudflare,
+  zoneId: string,
+  record: {
+    type: string;
+    name: string;
+    content: string;
+    ttl?: number;
+    proxied?: boolean;
+    priority?: number;
+  }
+): Promise<void> {
+  try {
+    const params: any = {
+      zone_id: zoneId,
+      type: record.type,
+      name: record.name,
+      content: record.content
+    };
+    if (record.ttl !== undefined) params.ttl = record.ttl;
+    if (record.proxied !== undefined) params.proxied = record.proxied;
+    if (record.priority !== undefined) params.priority = record.priority;
+
+    await client.dns.records.create(params);
+  } catch (error) {
+    throw error;
+  }
+}
